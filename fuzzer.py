@@ -13,6 +13,7 @@ wordlist_path = None
 num_of_threads = 2
 url = None
 timeout = 2
+extensions = None
 
 # the actual wordlist
 wordlist = None
@@ -24,11 +25,14 @@ def get_arguments():
     global wordlist_path
     global num_of_threads
     global url
+    global extensions
+
     try:
         if argumentList in ("-h", "--help") or len(argumentList) == 0:
             print('    [must] -u, --url: url to fuzz # python fuzzer.py -u http://tempname.com/\n' \
                   '    [must] -w, --wordlist: path to wordlist # python fuzzer.py -w /usr/share/wordlist/big.txt\n' \
-                  '    [option] -t, --threads: num of threads to run (default : 50)# python fuzzer.py -t 100\n')
+                  '    [option] -t, --threads: num of threads to run (default : 50)# python fuzzer.py -t 100\n'
+                  '    [option] -e, --extensions : file extensions list split by col# python fuzzer.py -e txt,html,php')
             exit(0)
 
         for argument, argument_val in zip(argumentList[::2], argumentList[1::2]):
@@ -45,7 +49,10 @@ def get_arguments():
                     num_of_threads = int(argument_val)
                 finally:
                     pass
+            elif argument in ("-e", "--extensions"):
 
+                extensions = argument_val.replace(" ", '').split(',')
+                extensions = [((i[::-1] + '.')[::-1]) for i in extensions]
             else:
                 print("Unexpected param parsed")
                 exit(0)
@@ -75,6 +82,13 @@ def fuzz(index_of_thread):
             req = requests.get(url + word, timeout=2)
             if req.status_code not in html_codes:
                 print(f'{url + word} : {req.status_code}')
+
+            # go over the extensions
+            for extension in extensions:
+                req = requests.get(url + word + extension , timeout=2)
+                if req.status_code not in html_codes:
+                    print(f'[{req.status_code}] -> {url + word + extension} : ')
+
         finally:
             pass
         if mutex:
